@@ -2,19 +2,26 @@
 
 === Source
 
-Tonight I came across this impressively narrated video of a colorful co-cited graph of papers since the late 1800s.
+Tonight I came across this https://www.youtube.com/watch?v=GW4s58u8PZo[impressively narrated video] of a colorful co-cited graph of papers since the late 1800s.
 
+ifndef::env-github[]
 .Narrated Youtube video
 ++++
 <iframe width="560" height="315" src="https://www.youtube.com/embed/GW4s58u8PZo" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 ++++
+endif::[]
+
+ifdef::env-github[]
 image::./nature-papers-video.png[link="https://www.youtube.com/embed/GW4s58u8PZo"]
+endif::[]
 
 You can read more about this in the https://www.nature.com/collections/eidahgdici/[Essay series] and thankfully Nature has also made the visualization available to https://www.nature.com/immersive/d41586-019-03165-4/index.html[explore interactively] for everyone.
 
+ifndef::env-github[]
 ++++
 <iframe src="https://www.nature.com/immersive/d41586-019-03165-4/index.html" width="800" height="600"></iframe>
 ++++
+endif::[]
 
 And there is also a https://www.nature.com/immersive/d41586-019-03165-4/dat/data.zip[Download Link for the data], which is a zip-file with two CSVs (nodes and edges).
 
@@ -23,13 +30,27 @@ And there is also a https://www.nature.com/immersive/d41586-019-03165-4/dat/data
 So we can import the co-cited paper data into Neo4j and can have some fun with it.
 
 ====
-If you haven't you can either download Neo4j Desktop and create a new "Local Graph" in your default project and start it.
+If you haven't you can either:
 
-Or you can use a Neo4j Sandbox 
+1. download https://neo4j.com/download[Neo4j Desktop]
+2. create a new "Local Graph" in your default project
+3. start it
+4. then open Neo4j Browser
 ====
 
-Unzip the file and copy the two CSV files to your Neo4j import folder. 
-E.g. via the drop-down button in Neo4j Desktop.
+Unzip the data file and copy the two CSV files to your Neo4j import folder
+E.g. via the drop-down button in Neo4j Desktop -> Manage Graph.
+
+====
+Or you can use a blank https://neo4j.com/sandbox[Neo4j Sandbox]. 
+If you use the Bloom sandbox you can also visualize larger parts of the graph.
+
+If you are online and have APOC installed (which Sandbox has), you can use the original zip file directly, by just appending the CSV file to the URL.
+
+just replace the LOAD CSV line with: 
+
+`call apoc.load.csv("https://www.nature.com/immersive/d41586-019-03165-4/dat/data.zip!cociteNodes.csv") yield map as row`
+====
 
 .cociteNodes.csv
 ,===
@@ -39,11 +60,15 @@ x,y,size,PubYear,HierCat,NatureID,Title
 
 WARNING: There are duplicates in the data, so need to use unique constraint and `MERGE`.
 
-.Load Nodes
+.Costraint for Paper-Ids
 [source,cypher]
 ----
 create constraint on (p:Paper) assert p.id is unique;
+----
 
+.Load Nodes
+[source,cypher]
+----
 using periodic commit 
 load csv with headers from "file:///cociteNodes.csv" as row
 merge (p:Paper {id:row.NatureID})
@@ -69,10 +94,35 @@ merge (p1)-[:CO_CITED]->(p2);
 
 It looks like this:
 
+image::initial-graph.png[width=500]
 
 
 === Quick Analysis
 
+.Most represented years
+----
+match (p:Paper) 
+return p.year, count(*) as count 
+order by count desc limit 5
+
+╒════════╤═══════╕
+│"p.year"│"count"│
+╞════════╪═══════╡
+│1966    │2620   │
+├────────┼───────┤
+│1963    │2587   │
+├────────┼───────┤
+│1964    │2568   │
+├────────┼───────┤
+│1967    │2518   │
+├────────┼───────┤
+│1965    │2425   │
+└────────┴───────┘
+----
+
+It seems as if the 60s are overproportionally represented, which is odd.
+
+.Paper citing other papers
 ----
 MATCH (p:Paper)
 WITH size((p)-->()) as out
@@ -121,26 +171,43 @@ MATCH path = ()-->(p)-->()
 RETURN path;
 ----
 
-
-
 == TODO
 
 - clusters / louvain
 - bloom 1.2
 - degree distribution
 
-Credits:
-Design
-Alice Grishchenko
-Mauro Martino
+=== Visualization 
 
-Data Analysis
-Alexander Gates
-Qing Ke
-Onur Varol
-Albert-László Barabási
+=== Bloom
 
-Special thanks
-Kelly Krause & the Nature team
+If you are usinge the Neo4j sandbox you can use an query like "Paper Paper Paper" to denote a 3 hop pattern.
 
-BarabasiLab 2019
+Here is one with up to 20 hops done with a Cypher statement (Search Phrase).
+
+image::bloom.png[]
+
+
+=== 3d Force Graph
+
+A bit closer to the Nature representation is the https://github.com/neo4j-3d-force-graph[3d-force-graph] variant.
+
+You can find the code in link:nature.html[]
+
+.Co-cited Papers from 1960
+image::3d-force-graph.png[]
+
+.Run the visualization
+----
+python -m SimpleHTTPServer &
+open http://localhost:8000/nature.html
+----
+
+
+=== Credits
+
+* Design: Alice Grishchenko, Mauro Martino
+* Data Analysis: Alexander Gates, Qing Ke, Onur Varol, Albert-László Barabási
+* Special thanks: Kelly Krause & the Nature team
+
+(c) BarabasiLab 2019
