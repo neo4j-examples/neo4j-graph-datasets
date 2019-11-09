@@ -234,6 +234,103 @@ open http://localhost:8000/nature.html
 
 // TODO with aura URL https://raw.githack.com/neo4j-examples/neo4j-graph-datasets/master/nature-cocited-papers/nature.html
 
+
+=== Graph Analysis
+
+Quickly running Louvain to identify clusters. As we already have a mono-partite graph (one type of node and relationships) we need no arguments.
+
+I't pretty quick too.
+
+----
+call algo.louvain()
+
+╒════════════╤═══════════════╤═══════╤════════════════╤═════╤═════╤═════╤═════╤═════╤══════╕
+│"loadMillis"│"computeMillis"│"nodes"│"communityCount"│"p50"│"p75"│"p90"│"p95"│"p99"│"p100"│
+╞════════════╪═══════════════╪═══════╪════════════════╪═════╪═════╪═════╪═════╪═════╪══════╡
+│101         │1924           │88231  │783             │1    │1    │357  │787  │1809 │2891  │
+└────────────┴───────────────┴───────┴────────────────┴─────┴─────┴─────┴─────┴─────┴──────┘
+----
+
+So we have 783 communities with at most 2900 members.
+
+Let's look at one of the smaller community and see if the grouping of titles make sense.
+
+[source,cypher]
+----
+MATCH (p:Paper)
+WITH p.community as c, collect(p) as papers
+WHERE  50 < size(papers) < 100
+WITH papers LIMIT 1
+UNWIND papers as p
+RETURN p.title as title
+----
+
+Looks in this case like genetics around viruses and immunology.
+
+,===
+title
+Particles associated with Australia Antigen in the Sera of Patients with Leukaemia&#44; Down's Syndrome and Hepatitis
+Menstrual Function and Pregnancy in Narcotics Addicts treated with Methadone
+Australia Antigen detected in the Nuclei of Liver Cells of Patients with Viral Hepatitis by the Fluorescent Antibody Technique
+Persistence of the Serum Hepatitis (SH-Australia) Antigen for Many Years
+Viral Hepatitis and the Australia-SH Antigen
+Additional Specificities of Australia Antigen and the Possible Identification of Hepatitis Carriers
+Chimpanzee Antibodies to Australia Antigen
+Australia Antigen&#8212;Antibody Complexes
+Failure to detect an Antigen associated with Hepatitis in a Community Epidemic
+Membrane-complement Fixation Test for Hepatitis Associated Antigen
+Teratogenicity Studies of Methadone HCl in Rats and Rabbits
+Experimental Infection of Chimpanzees with the Virus of Hepatitis B
+Australia Antigen as a Marker of Propagation of the Serum Hepatitis Virus in Liver Cultures
+Evidence for a Tumour-associated Antigen in Human Malignant Melanoma
+Specific Neutralization of Human Hepatitis Type A in Marmoset Monkeys
+,===
+
+Let's quickly (1-2 seconds) run pagerank over the graph and then use the most influential paper to stand in for each cluster.
+
+----
+CALL algo.pageRank()
+----
+
+What are the highest ranked papers overall?
+
+[source,cypher]
+----
+MATCH (p:Paper)
+RETURN p.title, p.pagerank 
+ORDER BY p.pagerank DESC LIMIT 5
+
+╒══════════════════════════════════════════════════════════════════════════════════════════════════════════════╤══════════════════╕
+│"p.title"                                                                                                     │"p.pagerank"      │
+╞══════════════════════════════════════════════════════════════════════════════════════════════════════════════╪══════════════════╡
+│"Bradykinin Activity of some Synthetic Peptides with only Slight Structural Resemblance to Natural Bradykinin"│11.033146028417251│
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────────┤
+│"Effect of Heat on the Serum Factors Gma&#44; Gmb&#44; Gmx and Gm-like"                                       │10.15241200541213 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────────┤
+│"Immunological Investigation of a Christmas Factor Inhibitor by Means of Boyden's Technique"                  │10.104345292859408│
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────────┤
+│"Evidence for the Natural Radioactivity of Indium"                                                            │9.737915850857796 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────────┤
+│"Observation of Million Degree Thermal Radiation from the Sun at a Wavelength of 1.5 Metres"                  │8.656841534959627 │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────┴──────────────────┘
+----
+
+
+=== Grouping
+
+We can now use APOC grouping to create a virtual graph that represents the clustered graph.
+By grouping it by community then all crossing relationships are merged together too into virtual ones.
+
+There is a slight trick we have to use for Browser and Bloom to properly render the nodes and rels.
+
+----
+call apoc.nodes.group(["Paper"],["community"]) yield nodes, relationships
+where size(relationships) > 1
+unwind nodes as node
+unwind relationships as rel
+return node, rel
+----
+
 === Credits
 
 * Design: Alice Grishchenko, Mauro Martino
