@@ -69,7 +69,6 @@ create constraint on (p:Paper) assert p.id is unique;
 .Load Nodes
 [source,cypher]
 ----
-using periodic commit 
 load csv with headers from "file:///cociteNodes.csv" as row
 merge (p:Paper {id:row.NatureID})
 SET p += {title:row.Title, x:toInteger(row.x), y:toInteger(row.y), size:toFloat(row.size), year:toInteger(row.PubYear), category:toInteger(row.HierCat)};
@@ -171,6 +170,36 @@ MATCH path = ()-->(p)-->()
 RETURN path;
 ----
 
+==== Top Keywords of Categories
+
+A bit of an apoc monster for the text processing: 
+
+`- tolower -> split -> collect -> flatten -> frequencies -> sort -> item`
+
+[source,cypher]
+----
+match (p:Paper)
+return p.category, [m IN apoc.coll.sortMaps(apoc.coll.frequencies(apoc.coll.flatten(collect([x in split(toLower(p.title)," ") where length(x)> 4]))),"count")|m.item][0..10] as words
+----
+
+,===
+p.category,words
+1,"[effect,plant,growth,plants,development,between,cells,drosophila,effects,control]"
+10,"[quantum,magnetic,electron,cosmic,structure,effect,light,optical,nuclear,observation]"
+4,"[cells,human,effect,activity,receptor,mouse,brain,growth,virus,vitro]"
+13,"[hominid,early,human,pleistocene,fossil,evidence,olduvai,dating,kenya,africa]"
+6,"[structure,effect,carbon,formation,fibres,metals,radio,crystals,effects,surface]"
+2,"[human,cells,protein,structure,effect,virus,activity,synthesis,between,muscle]"
+3,"[structure,chromatography,water,synthesis,molecular,crystal,hydrogen,effect,compounds,electron]"
+9,"[effect,statistical,tables,population,random,density,theory,relation,rainfall,spectrum]"
+8,"[origin,inductive,probability,effect,zealand,impossibility,south,structure,between,theory]"
+5,"[evidence,radio,solar,mantle,ocean,origin,x-ray,during,observations,magnetic]"
+12,"[visual,effect,behaviour,human,memory,effects,between,perception,learning,discrimination]"
+11,"[science,impact,velocity,research,method,liquid,action,theory,growth,between]"
+7,"[ageing,virus,human,effect,anopheles,gambiae,plasmodium,influenza,between,synthesis]"
+0,"[nature,theory,effect,structure,infection,polysaccharides,stromatoporoids,reproduction,spawning-places,fresh-water]"
+,===
+
 == TODO
 
 - clusters / louvain
@@ -203,6 +232,7 @@ python -m SimpleHTTPServer &
 open http://localhost:8000/nature.html
 ----
 
+// TODO with aura URL https://raw.githack.com/neo4j-examples/neo4j-graph-datasets/master/nature-cocited-papers/nature.html
 
 === Credits
 
