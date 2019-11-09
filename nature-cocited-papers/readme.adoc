@@ -8,8 +8,9 @@ Tonight I came across this impressively narrated video of a colorful co-cited gr
 ++++
 <iframe width="560" height="315" src="https://www.youtube.com/embed/GW4s58u8PZo" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 ++++
+image::./nature-papers-video.png[link="https://www.youtube.com/embed/GW4s58u8PZo"]
 
-You can read more about this in the https://www.nature.com/collections/eidahgdici/[Essay series] and thankfully Nature has also made the visualization available to explore for everyone.
+You can read more about this in the https://www.nature.com/collections/eidahgdici/[Essay series] and thankfully Nature has also made the visualization available to https://www.nature.com/immersive/d41586-019-03165-4/index.html[explore interactively] for everyone.
 
 ++++
 <iframe src="https://www.nature.com/immersive/d41586-019-03165-4/index.html" width="800" height="600"></iframe>
@@ -20,6 +21,12 @@ And there is also a https://www.nature.com/immersive/d41586-019-03165-4/dat/data
 === Import
 
 So we can import the co-cited paper data into Neo4j and can have some fun with it.
+
+====
+If you haven't you can either download Neo4j Desktop and create a new "Local Graph" in your default project and start it.
+
+Or you can use a Neo4j Sandbox 
+====
 
 Unzip the file and copy the two CSV files to your Neo4j import folder. 
 E.g. via the drop-down button in Neo4j Desktop.
@@ -59,6 +66,10 @@ merge (p1)-[:CO_CITED]->(p2);
 // not storing that path for now
 // Created 239621 relationships, completed after 7275 ms.
 ----
+
+It looks like this:
+
+
 
 === Quick Analysis
 
